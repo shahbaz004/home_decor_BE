@@ -2,6 +2,8 @@
 Review views.
 """
 
+from django.db.models import Avg, Count
+
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -36,6 +38,23 @@ class ReviewViewSet(ModelViewSet):
         if self.action in ("approve", "destroy"):
             return [IsAdmin()]
         return [IsAuthenticated()]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            agg = queryset.aggregate(avg_rating=Avg("rating"))
+            breakdown = {
+                star: queryset.filter(rating=star).count()
+                for star in range(1, 6)
+            }
+            response.data["average_rating"] = round(agg["avg_rating"] or 0, 1)
+            response.data["rating_breakdown"] = breakdown
+            return response
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def get_queryset(self):
         qs = Review.objects.select_related("user", "product").prefetch_related("images")

@@ -7,12 +7,15 @@ import logging
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
-from rest_framework.generics import RetrieveUpdateAPIView
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.core.pagination import StandardPagination
+from apps.core.permissions import IsAdmin
 
 from .serializers import (
     ChangePasswordSerializer,
@@ -174,6 +177,35 @@ class VerifyEmailView(APIView):
             {"success": True, "message": _("Email verified successfully.")},
             status=status.HTTP_200_OK,
         )
+
+
+class CustomerListView(ListAPIView):
+    """List all non-staff customers (admin only)."""
+
+    permission_classes = [IsAdmin]
+    serializer_class = UserProfileSerializer
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        from django.db.models import Q
+        qs = User.objects.filter(is_staff=False, is_superuser=False).order_by("-date_joined")
+        search = self.request.query_params.get("search", "")
+        if search:
+            qs = qs.filter(
+                Q(email__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+            )
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True, context={"request": request})
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True, context={"request": request})
+        return Response({"success": True, "data": serializer.data})
 
 
 class GoogleLoginView(APIView):

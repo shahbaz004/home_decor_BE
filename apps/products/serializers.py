@@ -15,6 +15,20 @@ from .models import (
 )
 
 
+class CategoryMinimalSerializer(serializers.ModelSerializer):
+    """Flat category serializer — used for children to avoid infinite recursion."""
+
+    product_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ["id", "name", "slug", "image", "display_order", "product_count"]
+        read_only_fields = ["id"]
+
+    def get_product_count(self, obj) -> int:
+        return obj.products.filter(is_active=True, deleted_at__isnull=True).count()
+
+
 class CategorySerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
@@ -39,7 +53,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def get_children(self, obj):
         children = obj.children.filter(is_active=True)
-        return CategorySerializer(children, many=True, context=self.context).data
+        return CategoryMinimalSerializer(children, many=True, context=self.context).data
 
     def get_product_count(self, obj) -> int:
         return obj.products.filter(is_active=True, deleted_at__isnull=True).count()
