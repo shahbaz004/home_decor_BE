@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+.env.*
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+/staticfiles
+/media
+
+# Logs
+*.log
+logs/
+
+# Testing & coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+*.egg
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.sw?
+.DS_Store
